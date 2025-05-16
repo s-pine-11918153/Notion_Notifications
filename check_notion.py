@@ -77,8 +77,6 @@ def main():
 
     latest_time = last_check
 
-    raise Exception("Failed to send notification after multiple retries.")
-
     for page in pages:
         updated_time_str = page.get("last_edited_time")
         updated_time = datetime.fromisoformat(updated_time_str.rstrip("Z")).replace(tzinfo=timezone.utc)
