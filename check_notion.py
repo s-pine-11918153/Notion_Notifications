@@ -1,6 +1,38 @@
 import os
 import requests
 from datetime import datetime, timezone
+import requests
+
+REPO = "ユーザー名/リポジトリ名"
+ISSUE_NUMBER = 1
+GITHUB_TOKEN = os.getenv("GH_PAT")
+
+def get_last_check_from_issue():
+    url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    comments = response.json()
+    if not comments:
+        return None
+    latest_comment = comments[-1]["body"]
+    try:
+        return datetime.fromisoformat(latest_comment.strip())
+    except ValueError:
+        return None
+
+def post_last_check_to_issue(dt):
+    url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+    data = {"body": dt.isoformat()}
+    response = requests.post(url, headers=headers, json=data)
+    response.raise_for_status()
 
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
@@ -21,14 +53,10 @@ def fetch_database_pages():
     return response.json().get("results", [])
 
 def load_last_check():
-    if not os.path.exists(LAST_CHECK_FILE):
-        return None
-    with open(LAST_CHECK_FILE, "r") as f:
-        return datetime.fromisoformat(f.read().strip())
+    return get_last_check_from_issue()
 
 def save_last_check(dt):
-    with open(LAST_CHECK_FILE, "w") as f:
-        f.write(dt.isoformat())
+    post_last_check_to_issue(dt)
 
 def send_discord_notification(title, url):
     data = {
