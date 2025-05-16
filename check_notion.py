@@ -2,15 +2,13 @@ import os
 import requests
 from datetime import datetime, timezone
 
-# 環境変数
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 GITHUB_TOKEN = os.getenv("GH_PAT")
-REPO = os.getenv("REPO")            # 例: yourname/notion-watcher
-ISSUE_NUMBER = 1                    # チェック時刻を保存するIssue番号
+REPO = os.getenv("REPO")
+ISSUE_NUMBER = 1
 
-# 共通ヘッダー
 HEADERS = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
     "Notion-Version": "2022-06-28",
@@ -23,7 +21,6 @@ def fetch_database_pages():
     response.raise_for_status()
     return response.json().get("results", [])
 
-# GitHub Issue から最終チェック時刻を読み込み
 def get_last_check_from_issue():
     url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
     headers = {
@@ -41,7 +38,6 @@ def get_last_check_from_issue():
     except ValueError:
         return None
 
-# GitHub Issue にチェック時刻を保存
 def post_last_check_to_issue(dt):
     url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
     headers = {
@@ -54,7 +50,7 @@ def post_last_check_to_issue(dt):
 
 def send_discord_notification(title, url):
     data = {
-        "content": f"📢 Notionのページが更新されました！\n**{title}**\n🔗 {url}"
+        "content": f"📢 Notionページが更新されました：**{title}**\n🔗 {url}"
     }
     response = requests.post(DISCORD_WEBHOOK_URL, json=data)
     response.raise_for_status()
@@ -70,7 +66,7 @@ def main():
         updated_time = datetime.fromisoformat(updated_time_str.rstrip("Z")).replace(tzinfo=timezone.utc)
 
         if last_check is None or updated_time > last_check:
-            title_prop = page["properties"].get("Page")
+            title_prop = page["properties"].get("Name")
             if title_prop and title_prop.get("title"):
                 title = title_prop["title"][0]["plain_text"]
             else:
