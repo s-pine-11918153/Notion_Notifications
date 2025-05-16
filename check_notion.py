@@ -1,3 +1,4 @@
+import time
 import os
 import requests
 from datetime import datetime, timezone
@@ -56,14 +57,27 @@ def send_discord_notification(title, url):
     data = {
         "content": f"📢 Notionのページが更新されました！\n**{title}**\n🔗 {url}"
     }
-    response = requests.post(DISCORD_WEBHOOK_URL, json=data)
-    response.raise_for_status()
+    retries = 3  # Number of retries
+    backoff = 2  # Initial backoff time in seconds
+
+    for attempt in range(retries):
+        response = requests.post(DISCORD_WEBHOOK_URL, json=data)
+        if response.status_code == 429:  # Rate limit error
+            retry_after = int(response.headers.get("Retry-After", backoff))
+            print(f"Rate limit hit. Retrying after {retry_after} seconds.")
+            time.sleep(retry_after)
+            backoff *= 2  # Exponential backoff
+        else:
+            response.raise_for_status()
+            return  # Exit if successful
 
 def main():
     last_check = get_last_check_from_issue()
     pages = fetch_database_pages()
 
     latest_time = last_check
+
+    raise Exception("Failed to send notification after multiple retries.")
 
     for page in pages:
         updated_time_str = page.get("last_edited_time")
