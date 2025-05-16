@@ -2,6 +2,8 @@ import os
 import requests
 from datetime import datetime, timezone
 
+import time
+
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
@@ -48,13 +50,31 @@ def post_last_check_to_issue(dt):
     response = requests.post(url, headers=headers, json=data)
     response.raise_for_status()
 
+
 def send_discord_notification(title, url):
     data = {
         "content": f"📢 Notionページが更新されました：**{title}**\n🔗 {url}"
     }
-    response = requests.post(DISCORD_WEBHOOK_URL, json=data)
-    response.raise_for_status()
 
+    for attempt in range(3):
+        try:
+            response = requests.post(DISCORD_WEBHOOK_URL, json=data)
+            print(f"[Discord] Status Code: {response.status_code}")
+            if response.status_code == 204:
+                print("✅ 通知成功")
+                return
+            elif response.status_code == 429:
+                retry_after = response.json().get("retry_after", 5)
+                print(f"⚠️ レート制限: {retry_after}秒待機")
+                time.sleep(retry_after)
+            else:
+                response.raise_for_status()
+                return
+        except Exception as e:
+            print(f"🚨 通知失敗: {e}")
+            time.sleep(3)
+
+    raise Exception("Failed to send notification after multiple retries.")
 def main():
     last_check = get_last_check_from_issue()
     pages = fetch_database_pages()
