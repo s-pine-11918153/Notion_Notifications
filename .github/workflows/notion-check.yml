@@ -26,5 +26,5 @@ jobs:
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           GH_PAT: ${{ secrets.GH_PAT }}
-          REPO: ${{ secrets.REPO }} # 固定でOK（もしくは secrets にしても可）
+          REPO: s-pine-11918153/Notion_Notifications # 固定でOK（もしくは secrets にしても可）
         run: python check_notion.py
