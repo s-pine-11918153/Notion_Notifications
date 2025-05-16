@@ -7,7 +7,7 @@ NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 GITHUB_TOKEN = os.getenv("GH_PAT")
-REPO = os.getenv("s-pine-11918153/Notion_Notifications")            # 例: yourname/notion-watcher
+REPO = os.getenv("REPO")            # 例: yourname/notion-watcher
 ISSUE_NUMBER = 1                    # チェック時刻を保存するIssue番号
 
 # 共通ヘッダー
