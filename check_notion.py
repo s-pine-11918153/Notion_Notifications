@@ -15,7 +15,7 @@ HEADERS = {
 LAST_CHECK_FILE = "last_check.txt"
 
 def fetch_database_pages():
-    url = f"https://api.notion.com/v1/databases/61a1dd55f55840f3aa929563fe96f602/query"
+    url = f"https://api.notion.com/v1/databases/61a1dd55f5584{NOTION_DATABASE_ID}/query"
     response = requests.post(url, headers=HEADERS)
     response.raise_for_status()
     return response.json().get("results", [])
