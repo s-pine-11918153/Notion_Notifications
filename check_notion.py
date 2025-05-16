@@ -2,12 +2,12 @@ import os
 import requests
 from datetime import datetime, timezone
 
-NOTION_TOKEN = os.getenv("ntn_V13056195462UtGD4D3NEdcxBWZfhqo0CtzVinWuiCO2Dv")
-DATABASE_ID = os.getenv("181efe8418b2452fa6a4ffef9e721e44?v=61a1dd55f55840f3aa929563fe96f602&pvs=4")
-DISCORD_WEBHOOK_URL = os.getenv("https://discord.com/api/webhooks/1372874248934395957/HIVLlUlUGEsewvLTRWsh8lUnyiBbBF_JwBJ7iDnp22M5kw89VBbEfMBJzDC7aSXktIsE")
+NOTION_TOKEN = os.getenv("NOTION_TOKEN")
+DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 HEADERS = {
-    "Authorization": f"Bearer {ntn_V13056195462UtGD4D3NEdcxBWZfhqo0CtzVinWuiCO2Dv}",
+    "Authorization": f"Bearer {NOTION_TOKEN}",
     "Notion-Version": "2022-06-28",
     "Content-Type": "application/json",
 }
