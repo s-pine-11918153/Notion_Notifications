@@ -60,8 +60,6 @@ def extract_title(page):
 
     if prop["type"] == "title" and prop["title"]:
         return prop["title"][0]["plain_text"]
-    elif prop["type"] == "rich_text" and prop["rich_text"]:
-        return prop["rich_text"][0]["plain_text"]
     else:
         return f"（未対応の型: {prop['type']}）"
 
@@ -104,29 +102,9 @@ def send_discord_notification(title, update_info, url):
     raise Exception("Failed to send notification after multiple retries.")
 
 
-def debug_property_types(pages):
-    for page in pages:
-        print("=== ページのプロパティ一覧 ===")
-        for key, prop in page["properties"].items():
-            print(f"プロパティ名: {key}")
-            print(f"  型: {prop['type']}")
-            value = prop.get(prop["type"], [])
-            if isinstance(value, list) and value:
-                print(f"  内容: {value[0].get('plain_text', '(plain_textなし)')}")
-            elif isinstance(value, dict):
-                print(f"  内容: {value}")
-            else:
-                print("  内容: （空）")
-        print("------------------------------")
-
-
 def main():
     last_check = get_last_check_from_issue()
     pages = fetch_database_pages()
-
-    # 任意でプロパティ構造を確認（必要なときだけ有効に）
-    # debug_property_types(pages)
-
     latest_time = last_check
 
     for page in pages:
