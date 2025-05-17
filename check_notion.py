@@ -1,9 +1,9 @@
 import os
 import requests
+import time
 from datetime import datetime, timezone
 
-import time
-
+# 環境変数から各種トークンやIDを取得
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
@@ -11,6 +11,7 @@ GITHUB_TOKEN = os.getenv("GH_PAT")
 REPO = os.getenv("REPO")
 ISSUE_NUMBER = 1
 
+# Notion API用のヘッダー
 HEADERS = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
     "Notion-Version": "2022-06-28",
@@ -50,10 +51,21 @@ def post_last_check_to_issue(dt):
     response = requests.post(url, headers=headers, json=data)
     response.raise_for_status()
 
+def extract_title(page):
+    for key, prop in page["properties"].items():
+        if key == "Page" and prop["type"] == "title" and prop["title"]:
+            return prop["title"][0]["plain_text"]
+    return "タイトル不明"
 
-def send_discord_notification(title, updated_information_str, url):
+def extract_update_information(page):
+    prop = page["properties"].get("Update_information")
+    if prop and prop["type"] == "title" and prop["title"]:
+        return prop["title"][0]["plain_text"]
+    return "なし"
+
+def send_discord_notification(title, update_info, url):
     data = {
-        "content": f"📢 Notionページが更新されました：\nページ：**{title}**\n更新内容：**{updated_information_str}**\n🔗 {url}"
+        "content": f"📢 Notionページが更新されました：\nページ：**{title}**\n更新内容：**{update_info}**\n🔗 {url}"
     }
 
     for attempt in range(3):
@@ -61,7 +73,6 @@ def send_discord_notification(title, updated_information_str, url):
             response = requests.post(DISCORD_WEBHOOK_URL, json=data)
             print(f"[Discord] Status Code: {response.status_code}")
             if response.status_code == 204:
-                print("✅ 通知成功")
                 return
             elif response.status_code == 429:
                 retry_after = response.json().get("retry_after", 5)
@@ -75,26 +86,21 @@ def send_discord_notification(title, updated_information_str, url):
             time.sleep(3)
 
     raise Exception("Failed to send notification after multiple retries.")
+
 def main():
     last_check = get_last_check_from_issue()
     pages = fetch_database_pages()
-
     latest_time = last_check
 
     for page in pages:
-        updated_information_str = page["properties"].get("Update_information")
         updated_time_str = page.get("last_edited_time")
         updated_time = datetime.fromisoformat(updated_time_str.rstrip("Z")).replace(tzinfo=timezone.utc)
 
         if last_check is None or updated_time > last_check:
-            title_prop = page["properties"].get("Name")
-            if title_prop and title_prop.get("title"):
-                title = title_prop["title"][0]["plain_text"]
-            else:
-                title = "タイトルなし"
-
+            title = extract_title(page)
+            update_info = extract_update_information(page)
             page_url = page.get("url", "URLなし")
-            send_discord_notification(title, updated_information_str, page_url)
+            send_discord_notification(title, update_info, page_url)
 
             if latest_time is None or updated_time > latest_time:
                 latest_time = updated_time
