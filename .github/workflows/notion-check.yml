@@ -2,7 +2,7 @@ name: Check Notion Updates
 
 on:
   schedule:
-    - cron: '* * */1 * *'  # 秒・分・時・日・月・年　10分おきに実行
+    - cron: '0 0 * * *'  # 秒・分・時・日・月・年　10分おきに実行
   workflow_dispatch:        # 手動実行も可能
 
 jobs:
