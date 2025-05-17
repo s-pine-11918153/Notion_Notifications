@@ -2,6 +2,7 @@ import os
 import requests
 import time
 from datetime import datetime, timezone
+import json
 
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
@@ -15,6 +16,14 @@ HEADERS = {
     "Notion-Version": "2022-06-28",
     "Content-Type": "application/json",
 }
+
+
+
+def debug_print_properties(page):
+    print("===== properties =====")
+    print(json.dumps(page.get("properties", {}), indent=2, ensure_ascii=False))
+    print("======================")
+
 
 def fetch_database_pages():
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
@@ -104,7 +113,10 @@ def main():
     pages = fetch_database_pages()
     latest_time = last_check
 
+
+
     for page in pages:
+        debug_print_properties(page)
         updated_time_str = page.get("last_edited_time")
         updated_time = datetime.fromisoformat(updated_time_str.rstrip("Z")).replace(tzinfo=timezone.utc)
 
