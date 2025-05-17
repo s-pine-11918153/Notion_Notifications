@@ -2,7 +2,6 @@ import os
 import requests
 import time
 from datetime import datetime, timezone
-import json
 
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
@@ -18,26 +17,12 @@ HEADERS = {
 }
 
 
-
-def debug_print_properties(page):
-    print("===== properties =====")
-    print(json.dumps(page.get("properties", {}), indent=2, ensure_ascii=False))
-    print("======================")
-
-
 def fetch_database_pages():
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
     response = requests.post(url, headers=HEADERS)
     response.raise_for_status()
-    results = response.json().get("results", [])
+    return response.json().get("results", [])
 
-    if results:
-        for prop_name in results[0]["properties"]:
-            print(f"プロパティ名: {prop_name}")
-    else:
-        print("ページが見つかりません")
-
-    return results
 
 def get_last_check_from_issue():
     url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
@@ -70,17 +55,26 @@ def post_last_check_to_issue(dt):
 
 def extract_title(page):
     prop = page["properties"].get("Page")
-    if prop and prop["type"] == "rich_text" and prop["rich_text"]:
-        return prop["rich_text"][0]["plain_text"]
-    return "（Page プロパティなし）"
+    if not prop:
+        return "（Page プロパティなし）"
+
+    if prop["type"] == "title" and prop["title"]:
+        return prop["title"][0]["plain_text"]
+    else:
+        return f"（未対応の型: {prop['type']}）"
+
 
 def extract_update_information(page):
     prop = page["properties"].get("Update_information")
-    if prop and prop["type"] == "rich_text" and prop["rich_text"]:
-        # rich_textは配列なので複数の要素がある場合は結合しても良い
-        return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
-    return "（Update_information プロパティなし）"
+    if not prop:
+        return "（Update_information プロパティなし）"
 
+    if prop["type"] == "title" and prop["title"]:
+        return prop["title"][0]["plain_text"]
+    elif prop["type"] == "rich_text" and prop["rich_text"]:
+        return prop["rich_text"][0]["plain_text"]
+    else:
+        return f"（未対応の型: {prop['type']}）"
 
 
 def send_discord_notification(title, update_info, url):
@@ -113,10 +107,7 @@ def main():
     pages = fetch_database_pages()
     latest_time = last_check
 
-
-
     for page in pages:
-        debug_print_properties(page)
         updated_time_str = page.get("last_edited_time")
         updated_time = datetime.fromisoformat(updated_time_str.rstrip("Z")).replace(tzinfo=timezone.utc)
 
