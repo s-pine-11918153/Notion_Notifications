@@ -57,17 +57,17 @@ def post_last_check_to_issue(dt):
 
 # Notion プロパティ（タイトル）取得：プロパティ名 "名前"
 def extract_title(page):
-    prop = page["properties"].get("Page")
+    prop = page["properties"].get("名前")
     if prop and prop["type"] == "title" and prop["title"]:
         return prop["title"][0]["plain_text"]
-    return "（Page プロパティなし）"
+    return "（名前 プロパティなし）"
 
-# Notion プロパティ（更新内容）取得：プロパティ名 "更新内容"
+# Notion プロパティ（更新内容）取得：プロパティ名 "Update_information"
 def extract_update_information(page):
-    prop = page["properties"].get("Update_informations")
+    prop = page["properties"].get("Update_information")
     if prop and prop["type"] == "rich_text" and prop["rich_text"]:
         return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
-    return "（Update_informations プロパティなし）"
+    return "（Update_information プロパティなし）"
 
 # Discord 通知（レート制限に対応）
 def send_discord_notification(title, update_info, url):
@@ -94,7 +94,7 @@ def send_discord_notification(title, update_info, url):
 
     raise Exception("Failed to send notification after multiple retries.")
 
-# プロパティのデバッグ表示（必要に応じて使用）
+# デバッグ用プロパティ表示
 def debug_print_properties(page):
     print("🔍 Notionページのプロパティ:")
     print(json.dumps(page.get("properties", {}), indent=2, ensure_ascii=False))
