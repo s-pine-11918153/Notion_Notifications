@@ -3,7 +3,6 @@ import requests
 import time
 from datetime import datetime, timezone
 
-# 環境変数から各種トークンやIDを取得
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
@@ -11,36 +10,18 @@ GITHUB_TOKEN = os.getenv("GH_PAT")
 REPO = os.getenv("REPO")
 ISSUE_NUMBER = 1
 
-# Notion API用のヘッダー
 HEADERS = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
     "Notion-Version": "2022-06-28",
     "Content-Type": "application/json",
 }
 
+
 def fetch_database_pages():
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
     response = requests.post(url, headers=HEADERS)
     response.raise_for_status()
     return response.json().get("results", [])
-
-def debug_property_types(pages):
-    for page in pages:
-        print("=== ページのプロパティ一覧 ===")
-        for key, prop in page["properties"].items():
-            print(f"プロパティ名: {key}")
-            print(f"  タイプ: {prop['type']}")
-            if prop[prop["type"]]:
-                if isinstance(prop[prop["type"]], list):
-                    for i, item in enumerate(prop[prop["type"]]):
-                        print(f"    [{i}] 内容: {item.get('plain_text', 'なし')}")
-                else:
-                    print(f"    内容: {prop[prop['type']]}")
-        print("----------------------------")
-
-# 使用例
-pages = fetch_database_pages()
-debug_property_types(pages)
 
 
 def get_last_check_from_issue():
@@ -60,6 +41,7 @@ def get_last_check_from_issue():
     except ValueError:
         return None
 
+
 def post_last_check_to_issue(dt):
     url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
     headers = {
@@ -70,17 +52,32 @@ def post_last_check_to_issue(dt):
     response = requests.post(url, headers=headers, json=data)
     response.raise_for_status()
 
+
 def extract_title(page):
-    for key, prop in page["properties"].items():
-        if key == "Page" and prop["type"] == "title" and prop["title"]:
-            return prop["title"][0]["plain_text"]
-    return "タイトル不明"
+    prop = page["properties"].get("Page")
+    if not prop:
+        return "（Page プロパティなし）"
+
+    if prop["type"] == "title" and prop["title"]:
+        return prop["title"][0]["plain_text"]
+    elif prop["type"] == "rich_text" and prop["rich_text"]:
+        return prop["rich_text"][0]["plain_text"]
+    else:
+        return f"（未対応の型: {prop['type']}）"
+
 
 def extract_update_information(page):
     prop = page["properties"].get("Update_information")
-    if prop and prop["type"] == "title" and prop["title"]:
+    if not prop:
+        return "（Update_information プロパティなし）"
+
+    if prop["type"] == "title" and prop["title"]:
         return prop["title"][0]["plain_text"]
-    return "なし"
+    elif prop["type"] == "rich_text" and prop["rich_text"]:
+        return prop["rich_text"][0]["plain_text"]
+    else:
+        return f"（未対応の型: {prop['type']}）"
+
 
 def send_discord_notification(title, update_info, url):
     data = {
@@ -106,9 +103,30 @@ def send_discord_notification(title, update_info, url):
 
     raise Exception("Failed to send notification after multiple retries.")
 
+
+def debug_property_types(pages):
+    for page in pages:
+        print("=== ページのプロパティ一覧 ===")
+        for key, prop in page["properties"].items():
+            print(f"プロパティ名: {key}")
+            print(f"  型: {prop['type']}")
+            value = prop.get(prop["type"], [])
+            if isinstance(value, list) and value:
+                print(f"  内容: {value[0].get('plain_text', '(plain_textなし)')}")
+            elif isinstance(value, dict):
+                print(f"  内容: {value}")
+            else:
+                print("  内容: （空）")
+        print("------------------------------")
+
+
 def main():
     last_check = get_last_check_from_issue()
     pages = fetch_database_pages()
+
+    # 任意でプロパティ構造を確認（必要なときだけ有効に）
+    # debug_property_types(pages)
+
     latest_time = last_check
 
     for page in pages:
@@ -126,6 +144,7 @@ def main():
 
     if latest_time:
         post_last_check_to_issue(latest_time)
+
 
 if __name__ == "__main__":
     main()
