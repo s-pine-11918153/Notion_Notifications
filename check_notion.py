@@ -82,7 +82,7 @@ def main():
     latest_time = last_check
 
     for page in pages:
-        updated_information_str = page.get("Update_information")
+        updated_information_str = page["properties"].get("Update_information")
         updated_time_str = page.get("last_edited_time")
         updated_time = datetime.fromisoformat(updated_time_str.rstrip("Z")).replace(tzinfo=timezone.utc)
 
