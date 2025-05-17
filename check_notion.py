@@ -10,7 +10,7 @@ NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 GITHUB_TOKEN = os.getenv("GH_PAT")
 REPO = os.getenv("REPO")
-ISSUE_NUMBER = 1
+ISSUE_NUMBER = os.getenv("ISSUE_NUMBER")
 
 # Notion API ヘッダー
 HEADERS = {
