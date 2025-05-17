@@ -51,9 +51,9 @@ def post_last_check_to_issue(dt):
     response.raise_for_status()
 
 
-def send_discord_notification(title, url):
+def send_discord_notification(title, Update_information, url):
     data = {
-        "content": f"📢 Notionページが更新されました：**{title}**\n🔗 {url}"
+        "content": f"📢 Notionページが更新されました：**{title}**\n**{Update_information}**\n🔗 {url}"
     }
 
     for attempt in range(3):
@@ -94,7 +94,7 @@ def main():
                 title = "タイトルなし"
 
             page_url = page.get("url", "URLなし")
-            send_discord_notification(title, page_url)
+            send_discord_notification(title,  page_url)
 
             if latest_time is None or updated_time > latest_time:
                 latest_time = updated_time
