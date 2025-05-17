@@ -16,19 +16,21 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
+
 def fetch_database_pages():
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
     response = requests.post(url, headers=HEADERS)
     response.raise_for_status()
     results = response.json().get("results", [])
 
-    # ✅ プロパティ構造を確認するために1件だけ出力
+    # 最初のページ全体を出力
     if results:
         import json
-        print("🔍 Notionページのプロパティ:")
-        print(json.dumps(results[0]["properties"], indent=2, ensure_ascii=False))
+        print("🔍 Notionページ全体:")
+        print(json.dumps(results[0], indent=2, ensure_ascii=False))
 
     return results
+
 
 def get_last_check_from_issue():
     url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
