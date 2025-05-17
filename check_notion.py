@@ -3,6 +3,7 @@ import requests
 import time
 import json
 from datetime import datetime, timezone
+import hashlib
 
 # 環境変数の読み込み
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
@@ -26,8 +27,8 @@ def fetch_database_pages():
     response.raise_for_status()
     return response.json().get("results", [])
 
-# GitHub Issue から最後のチェック日時を取得
-def get_last_check_from_issue():
+# GitHub Issue から最後のチェック情報を取得
+def get_last_check_info():
     url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
@@ -37,44 +38,48 @@ def get_last_check_from_issue():
     response.raise_for_status()
     comments = response.json()
     if not comments:
-        return None
+        return None, None
     latest_comment = comments[-1]["body"]
     try:
-        return datetime.fromisoformat(latest_comment.strip())
-    except ValueError:
-        return None
+        dt_str, last_hash = latest_comment.strip().split("|", 1)
+        return datetime.fromisoformat(dt_str), last_hash
+    except Exception:
+        return None, None
 
-# GitHub Issue に最終チェック時刻を記録
-def post_last_check_to_issue(dt):
+# GitHub Issue にチェック情報（時刻＋ハッシュ）を記録
+def post_check_info(dt, content_hash):
     url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json"
     }
-    data = {"body": dt.isoformat()}
+    data = {"body": f"{dt.isoformat()}|{content_hash}"}
     response = requests.post(url, headers=headers, json=data)
     response.raise_for_status()
 
-# タイトル（プロパティ名: 名前）
+# タイトル取得（"名前" プロパティ）
 def extract_title(page):
     prop = page["properties"].get("名前")
     if prop and prop["type"] == "title" and prop["title"]:
         return prop["title"][0]["plain_text"]
-    return "（名前 プロパティなし）"
+    return "（Page プロパティなし）"
 
-# 更新内容（プロパティ名: 更新内容）
+# 更新内容取得（"Update_information" プロパティ）
 def extract_update_information(page):
-    prop = page["properties"].get("更新内容")
+    prop = page["properties"].get("Update_information")
     if prop and prop["type"] == "rich_text" and prop["rich_text"]:
         return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
-    return "（更新内容 プロパティなし）"
+    return "（Update_information プロパティなし）"
+
+# ハッシュ生成
+def hash_update_info(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 # Discord 通知
 def send_discord_notification(title, update_info, url):
     data = {
         "content": f"📢 Notionページが更新されました：\nページ：**{title}**\n更新内容：**{update_info}**\n🔗 {url}"
     }
-
     for attempt in range(3):
         try:
             response = requests.post(DISCORD_WEBHOOK_URL, json=data)
@@ -91,17 +96,16 @@ def send_discord_notification(title, update_info, url):
         except Exception as e:
             print(f"🚨 通知失敗: {e}")
             time.sleep(3)
-
     raise Exception("Failed to send notification after multiple retries.")
 
-# プロパティ確認用
+# デバッグ表示（任意）
 def debug_print_properties(page):
     print("🔍 Notionページのプロパティ:")
     print(json.dumps(page.get("properties", {}), indent=2, ensure_ascii=False))
 
 # メイン処理
 def main():
-    last_check = get_last_check_from_issue()
+    last_check, last_hash = get_last_check_info()
     pages = fetch_database_pages()
     latest_time = last_check
 
@@ -109,19 +113,20 @@ def main():
         updated_time_str = page.get("last_edited_time")
         updated_time = datetime.fromisoformat(updated_time_str.rstrip("Z")).replace(tzinfo=timezone.utc)
 
-        if last_check is None or updated_time > last_check:
-            debug_print_properties(page)  # デバッグ用（削除可）
+        update_info = extract_update_information(page)
+        current_hash = hash_update_info(update_info)
 
+        if (last_check is None or updated_time > last_check) and current_hash != last_hash:
+            debug_print_properties(page)
             title = extract_title(page)
-            update_info = extract_update_information(page)
             page_url = page.get("url", "URLなし")
             send_discord_notification(title, update_info, page_url)
 
             if latest_time is None or updated_time > latest_time:
                 latest_time = updated_time
 
-    if latest_time:
-        post_last_check_to_issue(latest_time)
+            post_check_info(updated_time, current_hash)
+            break  # 1件のみ通知したら終了（必要に応じて削除）
 
 if __name__ == "__main__":
     main()
