@@ -53,7 +53,7 @@ def post_last_check_to_issue(dt):
 
 def send_discord_notification(title, updated_information_str, url):
     data = {
-        "content": f"📢 Notionページが更新されました：**{title}**\n**{updated_information_str}**\n🔗 {url}"
+        "content": f"📢 Notionページが更新されました：\nページ：**{title}**\n更新内容：**{updated_information_str}**\n🔗 {url}"
     }
 
     for attempt in range(3):
