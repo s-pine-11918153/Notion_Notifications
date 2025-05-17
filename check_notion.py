@@ -61,26 +61,17 @@ def post_last_check_to_issue(dt):
 
 def extract_title(page):
     prop = page["properties"].get("Page")
-    if not prop:
-        return "（Page プロパティなし）"
-
-    if prop["type"] == "title" and prop["title"]:
-        return prop["title"][0]["plain_text"]
-    else:
-        return f"（未対応の型: {prop['type']}）"
-
+    if prop and prop["type"] == "rich_text" and prop["rich_text"]:
+        return prop["rich_text"][0]["plain_text"]
+    return "（Page プロパティなし）"
 
 def extract_update_information(page):
     prop = page["properties"].get("Update_information")
-    if not prop:
-        return "（Update_information プロパティなし）"
+    if prop and prop["type"] == "rich_text" and prop["rich_text"]:
+        # rich_textは配列なので複数の要素がある場合は結合しても良い
+        return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
+    return "（Update_information プロパティなし）"
 
-    if prop["type"] == "title" and prop["title"]:
-        return prop["title"][0]["plain_text"]
-    elif prop["type"] == "rich_text" and prop["rich_text"]:
-        return prop["rich_text"][0]["plain_text"]
-    else:
-        return f"（未対応の型: {prop['type']}）"
 
 
 def send_discord_notification(title, update_info, url):
