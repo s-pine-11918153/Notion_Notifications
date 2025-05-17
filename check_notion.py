@@ -59,17 +59,17 @@ def post_check_info(dt, content_hash):
 
 # タイトル取得（"名前" プロパティ）
 def extract_title(page):
-    prop = page["properties"].get("名前")
+    prop = page["properties"].get("Page")
     if prop and prop["type"] == "title" and prop["title"]:
         return prop["title"][0]["plain_text"]
     return "（Page プロパティなし）"
 
 # 更新内容取得（"Update_information" プロパティ）
 def extract_update_information(page):
-    prop = page["properties"].get("Update_information")
+    prop = page["properties"].get("Update_informations")
     if prop and prop["type"] == "rich_text" and prop["rich_text"]:
         return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
-    return "（Update_information プロパティなし）"
+    return "（Update_informations プロパティなし）"
 
 # ハッシュ生成
 def hash_update_info(text):
