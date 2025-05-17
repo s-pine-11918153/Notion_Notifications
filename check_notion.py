@@ -24,6 +24,25 @@ def fetch_database_pages():
     response.raise_for_status()
     return response.json().get("results", [])
 
+def debug_property_types(pages):
+    for page in pages:
+        print("=== ページのプロパティ一覧 ===")
+        for key, prop in page["properties"].items():
+            print(f"プロパティ名: {key}")
+            print(f"  タイプ: {prop['type']}")
+            if prop[prop["type"]]:
+                if isinstance(prop[prop["type"]], list):
+                    for i, item in enumerate(prop[prop["type"]]):
+                        print(f"    [{i}] 内容: {item.get('plain_text', 'なし')}")
+                else:
+                    print(f"    内容: {prop[prop['type']]}")
+        print("----------------------------")
+
+# 使用例
+pages = fetch_database_pages()
+debug_property_types(pages)
+
+
 def get_last_check_from_issue():
     url = f"https://api.github.com/repos/{REPO}/issues/{ISSUE_NUMBER}/comments"
     headers = {
