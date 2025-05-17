@@ -126,7 +126,7 @@ def main():
                 latest_time = updated_time
 
             post_check_info(updated_time, current_hash)
-           # break  # 1件のみ通知したら終了（必要に応じて削除）
+            break  # 1件のみ通知したら終了（必要に応じて削除）
 
 if __name__ == "__main__":
     main()
