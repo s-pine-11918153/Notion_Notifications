@@ -82,11 +82,12 @@ def main():
     latest_time = last_check
 
     for page in pages:
+        updated_information_str = page.get("Update_information")
         updated_time_str = page.get("last_edited_time")
         updated_time = datetime.fromisoformat(updated_time_str.rstrip("Z")).replace(tzinfo=timezone.utc)
 
         if last_check is None or updated_time > last_check:
-            title_prop = page["properties"].get("Name")
+            title_prop = page["properties"].get("Page")
             if title_prop and title_prop.get("title"):
                 title = title_prop["title"][0]["plain_text"]
             else:
