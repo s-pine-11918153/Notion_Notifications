@@ -1,31 +1,32 @@
-name: Check Notion Updates
+name: Notion Update Check
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 秒・分・時・日・月・年　10分おきに実行
-  workflow_dispatch:        # 手動実行も可能
+    - cron: '0 0 * * *'  # ロンドン時間0時実行（日本毎日朝9時に実行）
+  workflow_dispatch:      # 手動実行も可能
 
 jobs:
-  check-updates:
+  check-notion:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout (必要ない場合は削除可)
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: 3.10
 
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run Notion checker
+      - name: Run Notion update checker
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          GH_PAT: ${{ secrets.GH_PAT }}
-          REPO: s-pine-11918153/Notion_Notifications # 固定でOK（もしくは secrets にしても可）
+          GH_PAT: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
           ISSUE_NUMBER: ${{ secrets.ISSUE_NUMBER }}
         run: python check_notion.py
