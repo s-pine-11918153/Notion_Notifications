@@ -1,9 +1,9 @@
-name: Check Notion Updates
+name: Notion Update Check
 
 on:
   schedule:
-    - cron: '* * */1 * *'  # 秒・分・時・日・月・年　10分おきに実行
-  workflow_dispatch:        # 手動実行も可能
+    - cron: '0 9 * * *'  # 毎日朝9時に実行
+  workflow_dispatch:      # 手動実行も可能
 
 jobs:
   check-updates:
@@ -26,6 +26,7 @@ jobs:
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           GH_PAT: ${{ secrets.GH_PAT }}
-          REPO: s-pine-11918153/Notion_Notifications # 固定でOK（もしくは secrets にしても可）
+          REPO: ${{  secrets.REPO }}
           ISSUE_NUMBER: ${{ secrets.ISSUE_NUMBER }}
         run: python check_notion.py
+        
