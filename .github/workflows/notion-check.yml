@@ -29,3 +29,11 @@ jobs:
           REPO: s-pine-11918153/Notion_Notifications # 固定でOK（もしくは secrets にしても可）
           ISSUE_NUMBER: ${{ secrets.ISSUE_NUMBER }}
         run: python check_notion.py
+
+              # 👇 Notion Update Check の古い履歴を削除（最新10件だけ残す）
+      - name: Cleanup old workflow runs
+        run: |
+          gh run list --workflow "Notion Update Check" --limit 100 --json databaseId -q '.[10:] | .[].databaseId' | \
+          xargs -r -I{} gh run delete {}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
