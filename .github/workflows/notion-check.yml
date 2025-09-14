@@ -32,11 +32,10 @@ jobs:
         run: python check_notion.py
 
 
-      # ★ 実行履歴の古いものを削除するステップを追加
+      # 👇 Notion Update Check の古い履歴を削除（最新10件だけ残す）
       - name: Cleanup old workflow runs
         run: |
-          # 最新10件を残して、それ以外を削除
-          gh run list --limit 100 --json databaseId -q '.[10:] | .[].databaseId' | \
+          gh run list --workflow "Notion Update Check" --limit 100 --json databaseId -q '.[10:] | .[].databaseId' | \
           xargs -r -I{} gh run delete {}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
