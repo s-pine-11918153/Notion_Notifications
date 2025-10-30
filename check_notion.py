@@ -1,9 +1,9 @@
 import os
 import requests
 import time
-import json
 from datetime import datetime, timezone
 
+# 環境変数
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
@@ -67,12 +67,14 @@ def extract_update_information(page):
     return "（Update_informations プロパティなし）"
 
 def send_discord_notification(title, update_info, url):
-    data = {
-        "content": f"📢 Notionページが更新されました：🔗 {url}"
-    }
+    if not DISCORD_WEBHOOK_URL:
+        return
+    #content = f"📢 Notionページが更新されました：\n**{title}**\n{update_info}\n🔗 {url}"
+    content = f"📢 Notionページが更新されました：\n🔗 {url}"
+    payload = {"content": content}
     for _ in range(3):
         try:
-            response = requests.post(DISCORD_WEBHOOK_URL, json=data)
+            response = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
             if response.status_code == 204:
                 return
             elif response.status_code == 429:
@@ -82,7 +84,7 @@ def send_discord_notification(title, update_info, url):
                 return
         except Exception:
             time.sleep(3)
-    raise Exception("Failed to send notification after multiple retries.")
+    print("Failed to send Discord notification after multiple retries.")
 
 def main():
     last_check, _ = get_last_check_from_issue()
