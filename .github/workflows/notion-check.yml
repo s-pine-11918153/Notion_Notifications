@@ -2,21 +2,24 @@ name: Notion Update Check
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # ロンドン時間0時実行（日本毎日朝9時に実行）
+    - cron: '0 0 * * *'  # ロンドン時間0時実行（日本時間午前9時）
   workflow_dispatch:      # 手動実行も可能
 
 jobs:
   check-notion:
     runs-on: ubuntu-latest
+    concurrency:
+      group: notion-update-check
+      cancel-in-progress: true  # 同時実行防止
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: '3.11'
 
       - name: Install dependencies
         run: pip install requests
@@ -31,11 +34,9 @@ jobs:
           ISSUE_NUMBER: ${{ secrets.ISSUE_NUMBER }}
         run: python check_notion.py
 
-
-      # 👇 Notion Update Check の古い履歴を削除（最新10件だけ残す）
       - name: Cleanup old workflow runs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh run list --workflow "Notion Update Check" --limit 100 --json databaseId -q '.[10:] | .[].databaseId' | \
           xargs -r -I{} gh run delete {}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
