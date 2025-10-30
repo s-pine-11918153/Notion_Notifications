@@ -1,44 +1,29 @@
+# .github/workflows/notion-check.yml
 name: Notion Update Check
 
 on:
+  workflow_dispatch:      # 手動実行可能
   schedule:
-    - cron: '0 0 * * *'  # UTC 0時（日本時間9時）
-  workflow_dispatch:
+    - cron: '0 0 * * *'  # UTC 0時（日本時間 9:00）
 
 jobs:
   check-notion:
     runs-on: ubuntu-latest
 
     steps:
-      # コードチェックアウト
       - uses: actions/checkout@v3
 
-      # Python 環境セットアップ
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11
 
-      # 依存関係インストール
-      - run: pip install requests gh
+      - run: pip install requests
 
-      # Notion 更新チェック + Discord 通知
       - name: Run Notion update checker
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          GH_PAT: ${{ secrets.GH_PAT }}
           REPO: ${{ secrets.REPO }}
           ISSUE_NUMBER: ${{ secrets.ISSUE_NUMBER }}
         run: python check_notion.py
-
-      # 古い workflow run を削除（最新1件を残す、安全に）
-      - name: Cleanup old workflow runs
-        run: |
-          echo "Deleting old workflow runs (latest run is preserved)..."
-          # 最新 run の ID を取得
-          LATEST_ID=$(gh run list --workflow "Notion Update Check" --limit 1 --json databaseId -q '.[0].databaseId')
-          # 最新以外を削除
-          gh run list --workflow "Notion Update Check" --limit 100 --json databaseId -q '.[].databaseId' | grep -v "$LATEST_ID" | xargs -r -I{} gh run delete {}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
