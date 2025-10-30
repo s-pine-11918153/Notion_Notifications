@@ -1,16 +1,16 @@
 name: Notion Update Check
 
 on:
+  workflow_dispatch:      # 手動実行用（必ず小文字、on: の直下）
   schedule:
     - cron: '0 0 * * *'  # UTC 0時（ロンドン時間0時）
-  workflow_dispatch:
 
 jobs:
   check-notion:
     runs-on: ubuntu-latest
 
     steps:
-      # コードチェックアウト
+      # コードをチェックアウト
       - uses: actions/checkout@v3
 
       # Python 環境セットアップ
