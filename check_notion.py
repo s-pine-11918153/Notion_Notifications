@@ -68,7 +68,8 @@ def extract_update_information(page):
 
 def send_discord_notification(title, update_info, url):
     data = {
-        "content": f"📢 Notionページが更新されました：\nページ：**{title}**\n更新内容：**{update_info}**\n🔗 {url}"
+       # "content": f"📢 Notionページが更新されました：\nページ：**{title}**\n更新内容：**{update_info}**\n🔗 {url}"
+       "content": f"📢 Notionページが更新されました：🔗 {url}"
     }
     for _ in range(3):
         try:
