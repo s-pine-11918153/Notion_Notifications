@@ -32,13 +32,14 @@ jobs:
           ISSUE_NUMBER: ${{ secrets.ISSUE_NUMBER }}
         run: python check_notion.py
 
-      # 古い workflow run を削除（最新1件を残す、安全に）
+      # 古い workflow run を削除（最新1件を残す）
       - name: Cleanup old workflow runs
         run: |
           echo "Deleting old workflow runs (latest run is preserved)..."
-          # 最新 run の ID を取得
-          LATEST_ID=$(gh run list --workflow "Notion Update Check" --limit 1 --json databaseId -q '.[0].databaseId')
+          # 最新 run の ID を取得（workflow ファイル名を正確に指定）
+          LATEST_ID=$(gh run list --workflow "Notion Update Check.yml" --limit 1 --json databaseId --jq '.[0].databaseId')
+          echo "Latest workflow run ID: $LATEST_ID"
           # 最新以外を削除
-          gh run list --workflow "Notion Update Check" --limit 100 --json databaseId -q '.[].databaseId' | grep -v "$LATEST_ID" | xargs -r -I{} gh run delete {}
+          gh run list --workflow "Notion Update Check.yml" --limit 100 --json databaseId --jq '.[].databaseId' | grep -v "$LATEST_ID" | xargs -r -I{} gh run delete {}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
