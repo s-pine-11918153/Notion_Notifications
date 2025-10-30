@@ -3,12 +3,13 @@ import requests
 import time
 from datetime import datetime, timezone
 
+# 環境変数から取得
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 GITHUB_TOKEN = os.getenv("GH_PAT")
 REPO = os.getenv("REPO")
-ISSUE_NUMBER = os.getenv("ISSUE_NUMBER", "1")
+ISSUE_NUMBER = int(os.getenv("ISSUE_NUMBER", "1"))  # 整数に変換
 
 HEADERS = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
@@ -66,29 +67,25 @@ def extract_update_information(page):
     return "（Update_informations プロパティなし）"
 
 def send_discord_notification(title, update_info, url):
-    """Discordに通知を送信する"""
     if not DISCORD_WEBHOOK_URL:
-        print("DISCORD_WEBHOOK_URL is not set. Skipping notification.")
         return
-
-    content = f"📢 **{title}** が更新されました\n📝 {update_info}\n🔗 {url}"
-    payload = {"content": content}
-
+    data = {
+        "content": f"📢 Notionページが更新されました：\n🔗 {url}"
+        # "content": f"📢 Notionページが更新されました：\n**{title}**\n{update_info}\n🔗 {url}"
+    }
     for _ in range(3):
         try:
-            res = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
-            if res.status_code == 204:
+            response = requests.post(DISCORD_WEBHOOK_URL, json=data)
+            if response.status_code == 204:
                 return
-            elif res.status_code == 429:
-                retry_after = res.json().get("retry_after", 5)
-                time.sleep(retry_after)
+            elif response.status_code == 429:
+                time.sleep(response.json().get("retry_after", 5))
             else:
-                res.raise_for_status()
+                response.raise_for_status()
                 return
-        except Exception as e:
-            print(f"Discord送信エラー: {e}")
+        except Exception:
             time.sleep(3)
-    raise Exception("Failed to send Discord notification after multiple retries.")
+    raise Exception("Failed to send notification after multiple retries.")
 
 def main():
     last_check, _ = get_last_check_from_issue()
