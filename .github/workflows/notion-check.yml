@@ -19,7 +19,7 @@ jobs:
           python-version: 3.11
 
       # 依存関係インストール
-      - run: pip install requests gh
+      - run: pip install requests
 
       # Notion 更新チェック + Discord 通知
       - name: Run Notion update checker
@@ -27,21 +27,29 @@ jobs:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          GH_PAT: ${{ secrets.GH_PAT }}
           REPO: ${{ secrets.REPO }}
           ISSUE_NUMBER: ${{ secrets.ISSUE_NUMBER }}
         run: python check_notion.py
 
-      # 古い workflow run を削除（最新1件を残す安全な方法）
+      # 古い workflow run を削除（最新1件を残す）
       - name: Cleanup old workflow runs
-        run: |
-          echo "Deleting old workflow runs (latest run is preserved)..."
-          # 最新のワークフローランIDを取得
-          LATEST_ID=$(gh run list --workflow "Notion Update Check" --limit 1 --json id --jq '.[0].id')
-          echo "Latest workflow run ID: $LATEST_ID"
-          # 最新以外を削除
-          gh run list --workflow "Notion Update Check" --limit 100 --json id --jq '.[].id' \
-            | grep -v "$LATEST_ID" \
-            | xargs -r -I{} gh run delete {} --confirm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          python - <<'EOF'
+import os, requests
+
+token = os.environ['GITHUB_TOKEN']
+repo = os.environ['REPO']
+url = f'https://api.github.com/repos/{repo}/actions/workflows/notion-check.yml/runs?per_page=100'
+headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github+json'}
+
+runs = requests.get(url, headers=headers).json().get('workflow_runs', [])
+if not runs:
+    exit()
+
+latest_id = runs[0]['id']  # 最新 run を保持
+for run in runs[1:]:
+    requests.delete(f'https://api.github.com/repos/{repo}/actions/runs/{run["id"]}', headers=headers)
+EOF
