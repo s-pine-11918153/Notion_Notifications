@@ -32,7 +32,7 @@ jobs:
         run: python check_notion.py
 
 
-      # 👇 Notion Update Check の古い履歴を削除（最新10件だけ残す）
+      # 👇 Notion Update Check の古い履歴を削除（最新1件だけ残す）
       - name: Cleanup old workflow runs
         run: |
           gh run list --workflow "Notion Update Check" --limit 100 --json databaseId -q '.[1:] | .[].databaseId' | \
