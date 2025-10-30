@@ -1,27 +1,24 @@
+# .github/workflows/notion-check.yml
 name: Notion Update Check
 
 on:
-  workflow_dispatch:      # 手動実行用（必ず小文字、on: の直下）
+  workflow_dispatch:      # 手動実行可能
   schedule:
-    - cron: '0 0 * * *'  # UTC 0時（ロンドン時間0時）
+    - cron: '0 0 * * *'  # UTC 0時（日本時間 9:00）
 
 jobs:
   check-notion:
     runs-on: ubuntu-latest
 
     steps:
-      # コードをチェックアウト
       - uses: actions/checkout@v3
 
-      # Python 環境セットアップ
       - uses: actions/setup-python@v4
         with:
           python-version: 3.11
 
-      # 依存関係インストール
       - run: pip install requests
 
-      # Notion 更新チェック + Discord 通知
       - name: Run Notion update checker
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
@@ -30,26 +27,3 @@ jobs:
           REPO: ${{ secrets.REPO }}
           ISSUE_NUMBER: ${{ secrets.ISSUE_NUMBER }}
         run: python check_notion.py
-
-      # 古い workflow run を削除（最新1件を残す）
-      - name: Cleanup old workflow runs
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-        run: |
-          python - <<'EOF'
-import os, requests
-
-token = os.environ['GITHUB_TOKEN']
-repo = os.environ['REPO']
-url = f'https://api.github.com/repos/{repo}/actions/workflows/notion-check.yml/runs?per_page=100'
-headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github+json'}
-
-runs = requests.get(url, headers=headers).json().get('workflow_runs', [])
-if not runs:
-    exit()
-
-latest_id = runs[0]['id']  # 最新 run を保持
-for run in runs[1:]:
-    requests.delete(f'https://api.github.com/repos/{repo}/actions/runs/{run["id"]}', headers=headers)
-EOF
