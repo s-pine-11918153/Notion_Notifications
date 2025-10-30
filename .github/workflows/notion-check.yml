@@ -37,9 +37,11 @@ jobs:
         run: |
           echo "Deleting old workflow runs (latest run is preserved)..."
           # 最新のワークフローランIDを取得
-          LATEST_ID=$(gh run list --workflow-file ".github/workflows/notion-check.yml" --limit 1 --json id --jq '.[0].id')
+          LATEST_ID=$(gh run list --workflow "Notion Update Check" --limit 1 --json id --jq '.[0].id')
           echo "Latest workflow run ID: $LATEST_ID"
           # 最新以外を削除
-          gh run list --workflow-file ".github/workflows/notion-check.yml" --limit 100 --json id --jq '.[].id' | grep -v "$LATEST_ID" | xargs -r -I{} gh run delete {} --confirm
+          gh run list --workflow "Notion Update Check" --limit 100 --json id --jq '.[].id' \
+            | grep -v "$LATEST_ID" \
+            | xargs -r -I{} gh run delete {} --confirm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
