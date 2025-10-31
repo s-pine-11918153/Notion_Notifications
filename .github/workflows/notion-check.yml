@@ -1,29 +1,31 @@
-# .github/workflows/notion-check.yml
 name: Notion Update Check
 
 on:
-  workflow_dispatch:      # 手動実行可能
   schedule:
-    - cron: '0 0 * * *'  # UTC 0時（日本時間 9:00）
+    - cron: '0 0 * * *'  # ロンドン時間0時実行（日本毎日朝9時に実行）
+  workflow_dispatch:
 
 jobs:
   check-notion:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: 3.11
 
-      - run: pip install requests
+      - name: Install dependencies
+        run: pip install requests
 
       - name: Run Notion update checker
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GH_PAT: ${{ secrets.GH_PAT }}
           REPO: ${{ secrets.REPO }}
           ISSUE_NUMBER: ${{ secrets.ISSUE_NUMBER }}
         run: python check_notion.py
