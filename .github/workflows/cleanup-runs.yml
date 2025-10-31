@@ -1,0 +1,35 @@
+# .github/workflows/cleanup-runs.yml
+name: Cleanup Old Workflow Runs
+
+on:
+  workflow_dispatch:      # 手動実行可能
+  schedule:
+    - cron: '5 0 * * *'  # UTC 0時5分（Notion workflow の後に実行）
+
+jobs:
+  cleanup-runs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete old workflow runs (keep latest)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          python - <<'EOF'
+import os, requests
+
+token = os.environ['GITHUB_TOKEN']
+repo = os.environ['REPO']
+
+url = f'https://api.github.com/repos/{repo}/actions/workflows/notion-check.yml/runs?per_page=100'
+headers = {'Authorization': f'token {token}', 'Accept': 'application/vnd.github+json'}
+
+runs = requests.get(url, headers=headers).json().get('workflow_runs', [])
+if not runs:
+    exit()
+
+latest_id = runs[0]['id']  # 最新 run は残す
+for run in runs[1:]:
+    requests.delete(f'https://api.github.com/repos/{repo}/actions/runs/{run["id"]}', headers=headers)
+EOF

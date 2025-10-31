@@ -126,5 +126,8 @@ def main():
 
     cleanup_old_workflow_runs()
 
+    # ワークフロー履歴のクリーンアップ
+    cleanup_old_workflow_runs()
+
 if __name__ == "__main__":
     main()
