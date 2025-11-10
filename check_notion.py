@@ -1,7 +1,7 @@
 import os
 import requests
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 # --- 環境変数 ---
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
@@ -18,15 +18,12 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-# --- NotionデータベースからNotify=ONのページを取得（ページネーション対応） ---
+# --- Notionデータベースから Notify=ON のページを取得（ページネーション対応） ---
 def fetch_notify_on_pages():
     url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
     all_results = []
     payload = {
-        "filter": {
-            "property": "Notify",
-            "checkbox": {"equals": True}
-        }
+        "filter": {"property": "Notify", "checkbox": {"equals": True}}
     }
 
     while True:
@@ -37,7 +34,6 @@ def fetch_notify_on_pages():
         results = data.get("results", [])
         all_results.extend(results)
 
-        # ページネーション対応
         if not data.get("has_more"):
             break
         payload["start_cursor"] = data["next_cursor"]
@@ -53,26 +49,33 @@ def turn_off_notify(page_id):
     if response.status_code != 200:
         print(f"[WARN] Failed to turn off Notify for {page_id}: {response.text}")
 
-# --- Notionページタイトル取得 ---
+# --- ページタイトルを取得 ---
 def extract_title(page):
     prop = page["properties"].get("Page")
     if prop and prop["type"] == "title" and prop["title"]:
         return prop["title"][0].get("plain_text", "（テキストなし）")
     return "（Page プロパティなし）"
 
-# --- Update情報取得 ---
+# --- 更新情報を取得 ---
 def extract_update_information(page):
     prop = page["properties"].get("Update_informations")
     if prop and prop["type"] == "rich_text" and prop["rich_text"]:
         return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
     return "（Update_informations プロパティなし）"
 
-# --- 更新日時取得 ---
+# --- 最終更新日時を取得（ページメタデータから） ---
 def extract_update_data(page):
-    prop = page["properties"].get("Last_edited_time")
-    if prop and prop["type"] == "rich_text" and prop["rich_text"]:
-        return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
-    return "（Last edited time プロパティなし）"
+    raw_time = page.get("last_edited_time")
+    if not raw_time:
+        return "（last_edited_time が存在しません）"
+    try:
+        # ISO文字列をdatetimeに変換し、日本時間（JST）へ
+        t = datetime.fromisoformat(raw_time.replace("Z", "+00:00"))
+        jst = t.astimezone(timezone(timedelta(hours=9)))
+        return jst.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception as e:
+        print(f"[WARN] 時刻変換エラー: {e}")
+        return raw_time
 
 # --- Discord通知 ---
 def send_discord_notification(title, update_info, update_data, url):
@@ -80,7 +83,13 @@ def send_discord_notification(title, update_info, update_data, url):
         print("[WARN] Discord Webhook 未設定。通知スキップ。")
         return
 
-    content = f"📢 **Notionページ更新通知**\n📝 {title}\n🔗 {url}\n ⌛{update_data}\n 📄{update_info}"
+    content = (
+        f"📢 **Notionページ更新通知**\n"
+        f"📝 {title}\n"
+        f"🔗 {url}\n"
+        f"⌛ {update_data}\n"
+        f"📄 {update_info}"
+    )
     payload = {"content": content}
 
     for _ in range(3):
@@ -98,13 +107,16 @@ def send_discord_notification(title, update_info, update_data, url):
             time.sleep(3)
     print("[ERROR] Failed to send Discord notification after multiple retries.")
 
-# --- 古いワークフロー削除 ---
+# --- 古いワークフローを削除 ---
 def cleanup_old_workflow_runs():
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
-        "Accept": "application/vnd.github+json"
+        "Accept": "application/vnd.github+json",
     }
-    wf_resp = requests.get(f"https://api.github.com/repos/{REPO}/actions/workflows", headers=headers)
+    wf_resp = requests.get(
+        f"https://api.github.com/repos/{REPO}/actions/workflows",
+        headers=headers,
+    )
     wf_resp.raise_for_status()
     workflows = wf_resp.json().get("workflows", [])
     workflow_id = None
@@ -118,7 +130,7 @@ def cleanup_old_workflow_runs():
 
     runs_resp = requests.get(
         f"https://api.github.com/repos/{REPO}/actions/workflows/{workflow_id}/runs?per_page=100",
-        headers=headers
+        headers=headers,
     )
     runs_resp.raise_for_status()
     runs = runs_resp.json().get("workflow_runs", [])
@@ -127,12 +139,12 @@ def cleanup_old_workflow_runs():
         run_id = run["id"]
         del_resp = requests.delete(
             f"https://api.github.com/repos/{REPO}/actions/runs/{run_id}",
-            headers=headers
+            headers=headers,
         )
         if del_resp.status_code not in (204, 200):
             print(f"[WARN] Failed to delete run {run_id}: {del_resp.status_code}")
 
-# --- メイン ---
+# --- メイン処理 ---
 def main():
     pages = fetch_notify_on_pages()
     if not pages:
@@ -140,7 +152,6 @@ def main():
         return
 
     for page in pages:
-        # 安全策: プロパティの再確認
         notify_flag = page["properties"].get("Notify", {}).get("checkbox", False)
         if not notify_flag:
             continue
