@@ -69,7 +69,7 @@ def extract_update_information(page):
 
 # --- 更新日時取得 ---
 def extract_update_data(page):
-    prop = page["properties"].get("Last edited time")
+    prop = page["properties"].get("Last_edited_time")
     if prop and prop["type"] == "rich_text" and prop["rich_text"]:
         return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
     return "（Last edited time プロパティなし）"
@@ -80,7 +80,7 @@ def send_discord_notification(title, update_info, update_data, url):
         print("[WARN] Discord Webhook 未設定。通知スキップ。")
         return
 
-    content = f"📢 **Notionページ更新通知**\n📝 {title}\n🔗 {url}\n ⌛{update_data} 📄\n{update_info}"
+    content = f"📢 **Notionページ更新通知**\n📝 {title}\n🔗 {url}\n ⌛{update_data}\n 📄{update_info}"
     payload = {"content": content}
 
     for _ in range(3):
