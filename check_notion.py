@@ -82,7 +82,7 @@ def send_discord_notification(title, update_info, update_data, url):
 
     content = f"📢 **Notionページ更新通知**\n📝 {title}\n🔗 {url}\n ⌛{update_data} 📄\n{update_info}"
     payload = {"content": content}
-📄
+
     for _ in range(3):
         try:
             response = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
