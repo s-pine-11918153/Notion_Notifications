@@ -75,7 +75,7 @@ def extract_update_data(page):
     return "（Last edited time プロパティなし）"
 
 # --- Discord通知 ---
-def send_discord_notification(title, update_info, url):
+def send_discord_notification(title, update_info, update_data, url):
     if not DISCORD_WEBHOOK_URL:
         print("[WARN] Discord Webhook 未設定。通知スキップ。")
         return
