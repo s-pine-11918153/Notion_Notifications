@@ -151,7 +151,7 @@ def main():
         page_url = page.get("url", "URLなし")
 
         print(f"[INFO] 通知中: {title}")
-        send_discord_notification(title, update_info, page_url)
+        send_discord_notification(title, update_info, update_data, page_url)
         turn_off_notify(page["id"])  # 通知後に自動でOFF
 
     cleanup_old_workflow_runs()
