@@ -4,8 +4,8 @@ import yfinance as yf
 from datetime import datetime, timezone
 
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
-DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
-DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
+DATABASE_ID = os.getenv("NOTION_DATABASE_ID_FOR_TRADE")
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL_FOR_TRADE")
 
 NOTION_HEADERS = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
