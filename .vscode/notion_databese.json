@@ -1,0 +1,16 @@
+{
+  "parent": { "type": "page_id", "page_id": "YOUR_PAGE_ID" },
+  "title": [{ "type": "text", "text": { "content": "株価通知ウォッチリスト" } }],
+  "properties": {
+    "銘柄名": { "title": {} },
+    "銘柄コード": { "rich_text": {} },
+    "現在株価": { "number": { "format": "number" } },
+    "通知条件": { "rich_text": {} },
+    "通知期限": { "date": {} },
+    "条件達成": { "checkbox": {} },
+    "最終確認日時": { "date": {} },
+    "配当日": { "date": {} },
+    "決算日": { "date": {} },
+    "メモ": { "rich_text": {} }
+  }
+}
