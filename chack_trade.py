@@ -4,7 +4,7 @@ import requests
 from datetime import datetime, timezone
 
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
-NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
+NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID_FOR_TRADE")
 
 headers = {
     "Authorization": f"Bearer {NOTION_TOKEN}",
