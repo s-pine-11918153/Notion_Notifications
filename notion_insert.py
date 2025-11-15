@@ -12,17 +12,18 @@ headers = {
     "Content-Type": "application/json"
 }
 
+# テスト用に最小限のデータで挿入
 data = {
     "parent": {"database_id": DATABASE_ID},
     "properties": {
         "Stock": {
-            "title": [{"text": {"content": "サイバーエージェント"}}]
+            "title": [{"text": {"content": "Test Stock"}}]
         },
         "Ticker": {
-            "rich_text": [{"text": {"content": "4751"}}]
+            "rich_text": [{"text": {"content": "TST"}}]
         },
         "condition": {
-            "rich_text": [{"text": {"content": "price > 3000"}}]
+            "select": {"name": "price > 3000"}
         },
         "Deadline_Date": {
             "date": {"start": "2025-12-31"}
@@ -31,5 +32,5 @@ data = {
 }
 
 response = requests.post(url, headers=headers, json=data)
-print("Status:", response.status_code)
+print("Status code:", response.status_code)
 print(response.text)
