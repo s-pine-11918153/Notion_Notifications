@@ -15,16 +15,16 @@ headers = {
 data = {
     "parent": {"database_id": DATABASE_ID},
     "properties": {
-        "銘柄名": {
-            "title": [{"text": {"content": "Stock"}}]
+        "Stock": {
+            "title": [{"text": {"content": "サイバーエージェント"}}]
         },
-        "ティッカーコード": {
-            "rich_text": [{"text": {"content": "Ticker"}}]
+        "Ticker": {
+            "rich_text": [{"text": {"content": "4751"}}]
         },
-        "通知条件": {
+        "condition": {
             "rich_text": [{"text": {"content": "price > 3000"}}]
         },
-        "通知期限": {
+        "Deadline_Date": {
             "date": {"start": "2025-12-31"}
         }
     }
