@@ -2,11 +2,8 @@ import os
 import requests
 from datetime import datetime
 
-#NOTION_TOKEN = os.getenv("NOTION_TOKEN")
-#DATABASE_ID = os.getenv("NOTION_DATABASE_ID_FOR_TRADE")
-
-NOTION_TOKEN = "ntn_r130561954663G3bzIVfIaztGkKoHWA47MsUXw50875cHk"
-DATABASE_ID = "2ab04dd22c5a8062a7b8c49fd7d63c27"
+NOTION_TOKEN = os.getenv("NOTION_TOKEN")
+DATABASE_ID = os.getenv("NOTION_DATABASE_ID_FOR_TRADE")
 
 url = "https://api.notion.com/v1/pages"
 headers = {
