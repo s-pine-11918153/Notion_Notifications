@@ -135,7 +135,7 @@ def cleanup_old_workflow_runs():
     runs_resp.raise_for_status()
     runs = runs_resp.json().get("workflow_runs", [])
 
-    for run in runs[2:]:
+    for run in runs[1:]:
         run_id = run["id"]
         del_resp = requests.delete(
             f"https://api.github.com/repos/{REPO}/actions/runs/{run_id}",
