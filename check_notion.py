@@ -51,10 +51,14 @@ def turn_off_notify(page_id):
 
 # --- ページタイトルを取得 ---
 def extract_title(page):
-    prop = page["properties"].get("Page")
-    if prop and prop["type"] == "title" and prop["title"]:
-        return prop["title"][0].get("plain_text", "（テキストなし）")
-    return "（Page プロパティなし）"
+    for key, prop in page["properties"].items():
+        if prop.get("type") == "title":
+            title_list = prop.get("title", [])
+            if title_list:
+                return title_list[0].get("plain_text", "（テキストなし）")
+            return "（タイトルは空）"
+    return "（タイトルプロパティなし）"
+
 
 # --- 更新情報を取得（プロパティ） ---
 def extract_update_information(page):
