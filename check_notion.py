@@ -56,12 +56,12 @@ def extract_title(page):
         return prop["title"][0].get("plain_text", "（テキストなし）")
     return "（Page プロパティなし）"
 
-# --- 更新情報を取得 ---
+# --- 更新情報を取得（プロパティ） ---
 def extract_update_information(page):
-    prop = page["properties"].get("Update_informations")
+    prop = page["properties"].get("Update_information")  # ←名称修正
     if prop and prop["type"] == "rich_text" and prop["rich_text"]:
         return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
-    return "（Update_informations プロパティなし）"
+    return "（Update_information プロパティなし）"
 
 # --- 最終更新日時を取得（ページメタデータから） ---
 def extract_update_data(page):
@@ -69,7 +69,6 @@ def extract_update_data(page):
     if not raw_time:
         return "（last_edited_time が存在しません）"
     try:
-        # ISO文字列をdatetimeに変換し、日本時間（JST）へ
         t = datetime.fromisoformat(raw_time.replace("Z", "+00:00"))
         jst = t.astimezone(timezone(timedelta(hours=9)))
         return jst.strftime("%Y-%m-%d %H:%M:%S")
@@ -77,8 +76,13 @@ def extract_update_data(page):
         print(f"[WARN] 時刻変換エラー: {e}")
         return raw_time
 
+# --- NotionページURL整形 ---
+def format_page_url(page_id):
+    uuid = page_id.replace("-", "")
+    return f"https://www.notion.so/{uuid}"
+
 # --- Discord通知 ---
-def send_discord_notification(title, update_info, update_data, url):
+def send_discord_notification(title, update_info, update_data, page_url):
     if not DISCORD_WEBHOOK_URL:
         print("[WARN] Discord Webhook 未設定。通知スキップ。")
         return
@@ -86,7 +90,7 @@ def send_discord_notification(title, update_info, update_data, url):
     content = (
         f"📢 **Notionページ更新通知**\n"
         f"📝 {title}\n"
-        f"🔗 {url}\n"
+        f"🔗 {page_url}\n"
         f"⌛ {update_data}\n"
         f"📄 {update_info}"
     )
@@ -95,7 +99,7 @@ def send_discord_notification(title, update_info, update_data, url):
     for _ in range(3):
         try:
             response = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
-            if response.status_code == 204:
+            if response.status_code in (200, 204):
                 return
             elif response.status_code == 429:
                 time.sleep(response.json().get("retry_after", 5))
@@ -105,6 +109,7 @@ def send_discord_notification(title, update_info, update_data, url):
         except Exception as e:
             print(f"[ERROR] Discord通知失敗: {e}")
             time.sleep(3)
+
     print("[ERROR] Failed to send Discord notification after multiple retries.")
 
 # --- 古いワークフローを削除 ---
@@ -113,17 +118,20 @@ def cleanup_old_workflow_runs():
         "Authorization": f"Bearer {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json",
     }
+
     wf_resp = requests.get(
         f"https://api.github.com/repos/{REPO}/actions/workflows",
         headers=headers,
     )
     wf_resp.raise_for_status()
     workflows = wf_resp.json().get("workflows", [])
+
     workflow_id = None
     for wf in workflows:
         if wf["name"] == WORKFLOW_NAME:
             workflow_id = wf["id"]
             break
+
     if not workflow_id:
         print(f"[WARN] Workflow '{WORKFLOW_NAME}' not found")
         return
@@ -135,6 +143,7 @@ def cleanup_old_workflow_runs():
     runs_resp.raise_for_status()
     runs = runs_resp.json().get("workflow_runs", [])
 
+    # 最新1つだけ残して残り削除
     for run in runs[1:]:
         run_id = run["id"]
         del_resp = requests.delete(
@@ -159,13 +168,17 @@ def main():
         title = extract_title(page)
         update_info = extract_update_information(page)
         update_data = extract_update_data(page)
-        page_url = page.get("url", "URLなし")
+
+        page_url = format_page_url(page["id"])
 
         print(f"[INFO] 通知中: {title}")
         send_discord_notification(title, update_info, update_data, page_url)
-        turn_off_notify(page["id"])  # 通知後に自動でOFF
+
+        # 通知後に自動でOFF
+        turn_off_notify(page["id"])
 
     cleanup_old_workflow_runs()
+
 
 if __name__ == "__main__":
     main()
