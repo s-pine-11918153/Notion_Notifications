@@ -59,8 +59,8 @@ def turn_off_notify(page_id):
 # --- ページタイトルを取得 ---
 def extract_title(page):
     for prop in page["properties"].values():
-        if prop.get("type") == "title":
-            title_list = prop.get("title", [])
+        if prop.get("type") == "Page":
+            title_list = prop.get("Page", [])
             if title_list:
                 text = title_list[0].get("plain_text", "").strip()
                 if text:
