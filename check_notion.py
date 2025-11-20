@@ -160,6 +160,13 @@ def main():
         print("[INFO] 通知対象のページはありません。")
         return
 
+    print("=== Notify=ON 取得ページ一覧 ===")
+    for page in pages:
+        title = extract_title(page)
+        print(f" - {title}")
+
+    print("=== 通知開始 ===")
+
     for page in pages:
         notify_flag = page["properties"].get("Notify", {}).get("checkbox", False)
         if not notify_flag:
@@ -168,14 +175,11 @@ def main():
         title = extract_title(page)
         update_info = extract_update_information(page)
         update_data = extract_update_data(page)
-
-        page_url = format_page_url(page["id"])
+        page_url = page.get("url", "URLなし")
 
         print(f"[INFO] 通知中: {title}")
         send_discord_notification(title, update_info, update_data, page_url)
-
-        # 通知後に自動でOFF
-        turn_off_notify(page["id"])
+        turn_off_notify(page["id"])  # 通知後に自動でOFF
 
     cleanup_old_workflow_runs()
 
