@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 # --- 環境変数 ---
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
-PARENT_PAGE_ID = os.getenv("NOTION_DATABASE_ID")  # 親ページID
+NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")  # 親ページID
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 GITHUB_TOKEN = os.getenv("GH_PAT")
 REPO = os.getenv("REPO")
@@ -48,24 +48,12 @@ def extract_update_data(page):
         print(f"[WARN] 時刻変換エラー: {e}")
         return raw_time
 
-# --- 親ページ/child_database 内 Notify=ON ページを取得 ---
-def fetch_notify_pages(page_id):
+# --- Notify=ON ページを取得（child_database対応） ---
+def fetch_notify_on_pages():
     all_pages = []
 
-    # 1. 親ページ自体の Notify プロパティ
     try:
-        resp = requests.get(f"https://api.notion.com/v1/pages/{page_id}", headers=HEADERS, timeout=10)
-        resp.raise_for_status()
-        page = resp.json()
-        notify_flag = page["properties"].get("Notify", {}).get("checkbox", False)
-        if notify_flag:
-            all_pages.append(page)
-    except Exception as e:
-        print(f"[WARN] 親ページ取得失敗: {e}")
-
-    # 2. child_database を取得
-    try:
-        url = f"https://api.notion.com/v1/blocks/{page_id}/children?page_size=100"
+        url = f"https://api.notion.com/v1/blocks/{NOTION_DATABASE_ID}/children?page_size=100"
         resp = requests.get(url, headers=HEADERS, timeout=10)
         resp.raise_for_status()
         blocks = resp.json().get("results", [])
@@ -80,8 +68,7 @@ def fetch_notify_pages(page_id):
                 q_resp = requests.post(f"https://api.notion.com/v1/databases/{db_id}/query", headers=HEADERS, json=payload, timeout=10)
                 q_resp.raise_for_status()
                 data = q_resp.json()
-                results = data.get("results", [])
-                all_pages.extend(results)
+                all_pages.extend(data.get("results", []))
                 if not data.get("has_more"):
                     break
                 start_cursor = data.get("next_cursor")
@@ -150,7 +137,7 @@ def cleanup_old_workflow_runs():
 
 # --- メイン ---
 def main():
-    pages = fetch_notify_pages(PARENT_PAGE_ID)
+    pages = fetch_notify_on_pages()
     if not pages:
         print("[INFO] 通知対象のページはありません。")
         return
