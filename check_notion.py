@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 # --- 環境変数 ---
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
-NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
+NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")  # ページIDでもOK
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 GITHUB_TOKEN = os.getenv("GH_PAT")
 REPO = os.getenv("REPO")
@@ -17,50 +17,24 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-# --- Notionデータベースから Notify=ON のページを取得 ---
-def fetch_notify_on_pages():
-    all_results = []
-    start_cursor = None
+# --- ページID or DBIDから正しいDBIDを取得（フルページDB対応） ---
+def resolve_database_id(id):
+    url = f"https://api.notion.com/v1/blocks/{id}/children"
+    try:
+        res = requests.get(url, headers=HEADERS, timeout=10)
+        if res.status_code != 200:
+            # DBとして直接クエリ可能
+            return id
+        data = res.json()
+        for block in data.get("results", []):
+            if block["type"] == "child_database":
+                print("[INFO] 内包DBを検出:", block["id"])
+                return block["id"]
+    except Exception as e:
+        print(f"[WARN] resolve_database_id エラー: {e}")
+    return id
 
-    while True:
-        payload = {
-            "page_size": 100,
-            "filter": {"property": "Notify", "checkbox": {"equals": True}}
-        }
-        if start_cursor:
-            payload["start_cursor"] = start_cursor
-
-        response = requests.post(
-            f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query",
-            headers=HEADERS,
-            json=payload
-        )
-        data = response.json()
-
-        # Debug
-        print("[DEBUG] fetched:", len(data.get("results", [])))
-
-        all_results.extend(data.get("results", []))
-
-        if not data.get("has_more"):
-            break
-        start_cursor = data.get("next_cursor")
-
-    print(f"[INFO] Notify=ON ページ取得件数: {len(all_results)}")
-    return all_results
-
-# --- NotifyをOFFにする ---
-def turn_off_notify(page_id):
-    payload = {"properties": {"Notify": {"checkbox": False}}}
-    response = requests.patch(
-        f"https://api.notion.com/v1/pages/{page_id}",
-        headers=HEADERS,
-        json=payload
-    )
-    if response.status_code != 200:
-        print(f"[WARN] Failed to turn off Notify for {page_id}: {response.text}")
-
-# --- ページタイトルを取得（Notion titleプロパティ準拠） ---
+# --- ページタイトルを取得 ---
 def extract_title(page):
     for name, prop in page["properties"].items():
         if prop.get("type") == "title":
@@ -71,15 +45,14 @@ def extract_title(page):
                 return f"（タイトル空, プロパティ名: {name}）"
     return "（タイトルプロパティなし）"
 
-
-# --- 更新情報(リッチテキスト)を取得 ---
+# --- Update_information取得 ---
 def extract_update_information(page):
     prop = page["properties"].get("Update_information")
     if prop and prop.get("type") == "rich_text" and prop.get("rich_text"):
         return "\n".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
     return "（Update_information プロパティなし）"
 
-# --- 最終更新日時を取得(JST) ---
+# --- 最終更新日時取得(JST) ---
 def extract_update_data(page):
     raw_time = page.get("last_edited_time")
     if not raw_time:
@@ -92,7 +65,54 @@ def extract_update_data(page):
         print(f"[WARN] 時刻変換エラー: {e}")
         return raw_time
 
-# --- Discord通知（Embed版） ---
+# --- Notify=ON ページ取得 ---
+def fetch_notify_on_pages():
+    resolved_id = resolve_database_id(NOTION_DATABASE_ID)
+    all_results = []
+    start_cursor = None
+
+    while True:
+        payload = {
+            "page_size": 100,
+            "filter": {"property": "Notify", "checkbox": {"equals": True}}
+        }
+        if start_cursor:
+            payload["start_cursor"] = start_cursor
+
+        response = requests.post(
+            f"https://api.notion.com/v1/databases/{resolved_id}/query",
+            headers=HEADERS,
+            json=payload,
+            timeout=10
+        )
+        data = response.json()
+        batch_count = len(data.get("results", []))
+        print(f"[DEBUG] fetched batch: {batch_count}")
+        all_results.extend(data.get("results", []))
+
+        if not data.get("has_more"):
+            break
+        start_cursor = data.get("next_cursor")
+
+    print(f"[INFO] Notify=ON ページ取得件数: {len(all_results)}")
+    return all_results
+
+# --- Notify OFF ---
+def turn_off_notify(page_id):
+    payload = {"properties": {"Notify": {"checkbox": False}}}
+    try:
+        res = requests.patch(
+            f"https://api.notion.com/v1/pages/{page_id}",
+            headers=HEADERS,
+            json=payload,
+            timeout=10
+        )
+        if res.status_code != 200:
+            print(f"[WARN] Failed to turn off Notify for {page_id}: {res.text}")
+    except Exception as e:
+        print(f"[WARN] turn_off_notify エラー: {e}")
+
+# --- Discord通知(Embed版) ---
 def send_discord_notification(title, update_info, update_data, page_url):
     if not DISCORD_WEBHOOK_URL:
         print("[WARN] Discord Webhook 未設定。通知スキップ。")
@@ -103,28 +123,26 @@ def send_discord_notification(title, update_info, update_data, page_url):
             "title": title,
             "url": page_url,
             "description": update_info,
-            "fields": [
-                {"name": "最終更新", "value": update_data}
-            ]
+            "fields": [{"name": "最終更新", "value": update_data}]
         }]
     }
 
     for _ in range(5):
         try:
-            response = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
-            if response.status_code in (200, 204):
+            res = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
+            if res.status_code in (200, 204):
                 return
-            elif response.status_code == 429:
-                time.sleep(response.json().get("retry_after", 5))
+            elif res.status_code == 429:
+                retry = res.json().get("retry_after", 5)
+                time.sleep(retry)
             else:
-                response.raise_for_status()
+                res.raise_for_status()
         except Exception as e:
             print(f"[ERROR] Discord通知失敗: {e}")
             time.sleep(3)
+    print("[ERROR] Discord通知失敗(複数回)")
 
-    print("[ERROR] Failed to send Discord notification after multiple retries.")
-
-# --- 古いワークフロー履歴削除（最新1件以外） ---
+# --- 古いワークフロー削除 ---
 def cleanup_old_workflow_runs():
     headers = {"Authorization": f"Bearer {GITHUB_TOKEN}", "Accept": "application/vnd.github+json"}
     wf_resp = requests.get(f"https://api.github.com/repos/{REPO}/actions/workflows", headers=headers)
@@ -143,14 +161,13 @@ def cleanup_old_workflow_runs():
     runs_resp.raise_for_status()
     runs = runs_resp.json().get("workflow_runs", [])
 
-    for run in runs[1:]:  # 最新以外削除
+    for run in runs[1:]:
         run_id = run["id"]
         del_resp = requests.delete(f"https://api.github.com/repos/{REPO}/actions/runs/{run_id}", headers=headers)
         if del_resp.status_code not in (200, 204):
             print(f"[WARN] Failed to delete run {run_id}: {del_resp.status_code}")
 
-
-# --- メイン処理 ---
+# --- メイン ---
 def main():
     pages = fetch_notify_on_pages()
     if not pages:
@@ -168,7 +185,6 @@ def main():
         if not notify_flag:
             continue
 
-        print("[DEBUG] properties keys:", page["properties"].keys())
         title = extract_title(page)
         update_info = extract_update_information(page)
         update_data = extract_update_data(page)
@@ -177,10 +193,9 @@ def main():
         print(f"[INFO] 通知中: {title}")
         send_discord_notification(title, update_info, update_data, page_url)
 
-        turn_off_notify(page["id"])  # 通知後OFF
+        turn_off_notify(page["id"])
 
     cleanup_old_workflow_runs()
-
 
 if __name__ == "__main__":
     main()
