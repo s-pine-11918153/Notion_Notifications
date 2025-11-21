@@ -24,8 +24,16 @@ def fetch_notify_on_pages():
 
     while True:
         payload = {
-            "filter": {"property": "Notify", "checkbox": {"equals": True}}
+            "embeds": [{
+                "title": title,
+                "url": page_url,
+                "description": update_info,
+                "fields": [
+                    {"name": "最終更新", "value": update_data}
+                ]
+            }]
         }
+
         if start_cursor:
             payload["start_cursor"] = start_cursor
 
@@ -58,14 +66,11 @@ def turn_off_notify(page_id):
 
 # --- ページタイトルを取得 ---
 def extract_title(page):
-    for prop in page["properties"].values():
-        if prop.get("type") == "Page":
-            title_list = prop.get("Page", [])
-            if title_list:
-                text = title_list[0].get("plain_text", "").strip()
-                if text:
-                    return text
+    title_prop = next((p for p in page["properties"].values() if p.get("type") == "title"), None)
+    if title_prop and title_prop.get("title"):
+        return title_prop["title"][0].get("plain_text", "").strip()
     return "（タイトルなし）"
+
 
 # --- 更新情報を取得 ---
 def extract_update_information(page):
@@ -95,8 +100,7 @@ def send_discord_notification(title, update_info, update_data, page_url):
 
     content = (
         f"📢 **Notionページ更新通知**\n"
-        f"📝 {title}\n"
-        f"🔗 {page_url}\n"
+        f"📝[{title}]🔗({page_url})"
         f"⌛ {update_data}\n"
         f"📄 {update_info}"
     )
