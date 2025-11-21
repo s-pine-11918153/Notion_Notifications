@@ -4,8 +4,8 @@ import time
 from datetime import datetime, timezone, timedelta
 
 # --- 環境変数 ---
+NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")  # 親ページID
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
-NOTION_PAGE_ID = os.getenv("NOTION_DATABASE_ID")  # 親ページID
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 GITHUB_TOKEN = os.getenv("GH_PAT")
 REPO = os.getenv("REPO")
@@ -58,7 +58,7 @@ def is_notify_checked(page):
 # --- 親ページ取得 ---
 def fetch_notify_parent_page():
     try:
-        url = f"https://api.notion.com/v1/pages/{NOTION_PAGE_ID}"
+        url = f"https://api.notion.com/v1/pages/{NOTION_DATABASE_ID}"
         resp = requests.get(url, headers=HEADERS, timeout=10)
         resp.raise_for_status()
         page = resp.json()
