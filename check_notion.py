@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 
 # --- 環境変数 ---
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
-NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")  # 親ページID
+NOTION_PAGE_ID = os.getenv("NOTION_DATABASE_ID")  # 親ページID
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 GITHUB_TOKEN = os.getenv("GH_PAT")
 REPO = os.getenv("REPO")
@@ -17,7 +17,7 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-# --- ページタイトル取得 ---
+# --- タイトル取得 ---
 def extract_title(page):
     for name, prop in page.get("properties", {}).items():
         if prop.get("type") == "title":
@@ -28,14 +28,14 @@ def extract_title(page):
                 return f"（タイトル空, プロパティ名: {name}）"
     return "（タイトルプロパティなし）"
 
-# --- Update_information取得 ---
+# --- 更新情報取得 ---
 def extract_update_information(page):
     prop = page.get("properties", {}).get("Update_information")
     if prop and prop.get("type") == "rich_text" and prop.get("rich_text"):
         return "\n".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
     return "（Update_information プロパティなし）"
 
-# --- 最終更新日時取得(JST) ---
+# --- 最終更新日時取得 ---
 def extract_update_data(page):
     raw_time = page.get("last_edited_time")
     if not raw_time:
@@ -55,35 +55,20 @@ def is_notify_checked(page):
         return prop.get("checkbox", False)
     return False
 
-# --- Notify=ON ページを取得（child_database対応） ---
-def fetch_notify_on_pages():
-    all_pages = []
-
+# --- 親ページ取得 ---
+def fetch_notify_parent_page():
     try:
-        url = f"https://api.notion.com/v1/blocks/{NOTION_DATABASE_ID}/children?page_size=100"
+        url = f"https://api.notion.com/v1/pages/{NOTION_PAGE_ID}"
         resp = requests.get(url, headers=HEADERS, timeout=10)
         resp.raise_for_status()
-        blocks = resp.json().get("results", [])
-        child_db_ids = [b["id"] for b in blocks if b["type"] == "child_database"]
-
-        for db_id in child_db_ids:
-            start_cursor = None
-            while True:
-                payload = {"page_size": 100, "filter": {"property": "Notify", "checkbox": {"equals": True}}}
-                if start_cursor:
-                    payload["start_cursor"] = start_cursor
-                q_resp = requests.post(f"https://api.notion.com/v1/databases/{db_id}/query", headers=HEADERS, json=payload, timeout=10)
-                q_resp.raise_for_status()
-                data = q_resp.json()
-                all_pages.extend(data.get("results", []))
-                if not data.get("has_more"):
-                    break
-                start_cursor = data.get("next_cursor")
+        page = resp.json()
+        if is_notify_checked(page):
+            return [page]
+        else:
+            return []
     except Exception as e:
-        print(f"[WARN] child_database 取得失敗: {e}")
-
-    print(f"[INFO] Notify=ON ページ総取得件数: {len(all_pages)}")
-    return all_pages
+        print(f"[WARN] 親ページ取得失敗: {e}")
+        return []
 
 # --- Notify OFF ---
 def turn_off_notify(page_id):
@@ -95,7 +80,7 @@ def turn_off_notify(page_id):
     except Exception as e:
         print(f"[WARN] turn_off_notify エラー: {e}")
 
-# --- Discord通知(Embed版) ---
+# --- Discord通知 ---
 def send_discord_notification(title, update_info, update_data, page_url):
     if not DISCORD_WEBHOOK_URL:
         print("[WARN] Discord Webhook 未設定。通知スキップ。")
@@ -133,7 +118,8 @@ def cleanup_old_workflow_runs():
     if not workflow_id:
         print(f"[WARN] Workflow '{WORKFLOW_NAME}' not found")
         return
-    runs_resp = requests.get(f"https://api.github.com/repos/{REPO}/actions/workflows/{workflow_id}/runs?per_page=100", headers=headers)
+    runs_resp = requests.get(f"https://api.github.com/repos/{REPO}/actions/workflows/{workflow_id}/runs?per_page=100",
+                             headers=headers)
     runs_resp.raise_for_status()
     runs = runs_resp.json().get("workflow_runs", [])
     for run in runs[1:]:
@@ -144,7 +130,7 @@ def cleanup_old_workflow_runs():
 
 # --- メイン ---
 def main():
-    pages = fetch_notify_on_pages()
+    pages = fetch_notify_parent_page()
     if not pages:
         print("[INFO] 通知対象のページはありません。")
         return
@@ -155,9 +141,6 @@ def main():
 
     print("=== 通知開始 ===")
     for page in pages:
-        if not is_notify_checked(page):
-            continue  # チェックOFFならスキップ
-
         title = extract_title(page)
         update_info = extract_update_information(page)
         update_data = extract_update_data(page)
