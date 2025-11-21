@@ -24,6 +24,7 @@ def fetch_notify_on_pages():
 
     while True:
         payload = {
+            "page_size": 100,
             "filter": {"property": "Notify", "checkbox": {"equals": True}}
         }
         if start_cursor:
@@ -34,8 +35,11 @@ def fetch_notify_on_pages():
             headers=HEADERS,
             json=payload
         )
-        response.raise_for_status()
         data = response.json()
+
+        # Debug
+        print("[DEBUG] fetched:", len(data.get("results", [])))
+
         all_results.extend(data.get("results", []))
 
         if not data.get("has_more"):
@@ -58,10 +62,15 @@ def turn_off_notify(page_id):
 
 # --- ページタイトルを取得（Notion titleプロパティ準拠） ---
 def extract_title(page):
-    title_prop = next((p for p in page["properties"].values() if p.get("type") == "title"), None)
-    if title_prop and title_prop.get("title"):
-        return title_prop["title"][0].get("plain_text", "").strip()
-    return "（タイトルなし）"
+    for name, prop in page["properties"].items():
+        if prop.get("type") == "title":
+            title_list = prop.get("title", [])
+            if title_list:
+                return title_list[0].get("plain_text", "").strip()
+            else:
+                return f"（タイトル空, プロパティ名: {name}）"
+    return "（タイトルプロパティなし）"
+
 
 # --- 更新情報(リッチテキスト)を取得 ---
 def extract_update_information(page):
@@ -159,6 +168,7 @@ def main():
         if not notify_flag:
             continue
 
+        print("[DEBUG] properties keys:", page["properties"].keys())
         title = extract_title(page)
         update_info = extract_update_information(page)
         update_data = extract_update_data(page)
