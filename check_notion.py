@@ -19,7 +19,7 @@ HEADERS = {
 
 # --- ページタイトル取得 ---
 def extract_title(page):
-    for name, prop in page["properties"].items():
+    for name, prop in page.get("properties", {}).items():
         if prop.get("type") == "title":
             title_list = prop.get("title", [])
             if title_list:
@@ -30,7 +30,7 @@ def extract_title(page):
 
 # --- Update_information取得 ---
 def extract_update_information(page):
-    prop = page["properties"].get("Update_information")
+    prop = page.get("properties", {}).get("Update_information")
     if prop and prop.get("type") == "rich_text" and prop.get("rich_text"):
         return "\n".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
     return "（Update_information プロパティなし）"
@@ -47,6 +47,13 @@ def extract_update_data(page):
     except Exception as e:
         print(f"[WARN] 時刻変換エラー: {e}")
         return raw_time
+
+# --- Notifyチェック判定 ---
+def is_notify_checked(page):
+    prop = page.get("properties", {}).get("Notify")
+    if prop and prop.get("type") == "checkbox":
+        return prop.get("checkbox", False)
+    return False
 
 # --- Notify=ON ページを取得（child_database対応） ---
 def fetch_notify_on_pages():
@@ -148,6 +155,9 @@ def main():
 
     print("=== 通知開始 ===")
     for page in pages:
+        if not is_notify_checked(page):
+            continue  # チェックOFFならスキップ
+
         title = extract_title(page)
         update_info = extract_update_information(page)
         update_data = extract_update_data(page)
