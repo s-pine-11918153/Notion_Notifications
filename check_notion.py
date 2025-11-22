@@ -55,7 +55,7 @@ def fetch_notify_on_pages():
 
     print(f"[INFO] Notify=ON ページ総取得件数: {len(all_results)}")
     print("[DEBUG FULL PAGE DUMP]")
-print(json.dumps(results[0], indent=2, ensure_ascii=False))
+    print(json.dumps(results[0], indent=2, ensure_ascii=False))
     return all_results
 
 
