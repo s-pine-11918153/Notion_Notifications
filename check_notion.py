@@ -43,6 +43,10 @@ def fetch_notify_on_pages():
         for p in results:
             print(f"[DEBUG] Page ID: {p.get('id')} Notify={p['properties'].get('Notify') if p.get('properties') else None}")
 
+        for r in results:
+            print(r["id"], r["object"], r.get("title"))
+
+        
         all_results.extend(results)
 
         if not data.get("has_more"):
