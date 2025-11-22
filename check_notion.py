@@ -4,8 +4,7 @@ import time
 from datetime import datetime, timezone, timedelta
 import json
 
-print("[DEBUG FULL PAGE DUMP]")
-print(json.dumps(results[0], indent=2, ensure_ascii=False))
+
 
 # --- 環境変数 ---
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
@@ -55,6 +54,8 @@ def fetch_notify_on_pages():
         payload["start_cursor"] = data["next_cursor"]
 
     print(f"[INFO] Notify=ON ページ総取得件数: {len(all_results)}")
+    print("[DEBUG FULL PAGE DUMP]")
+print(json.dumps(results[0], indent=2, ensure_ascii=False))
     return all_results
 
 
