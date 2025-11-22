@@ -2,6 +2,10 @@ import os
 import requests
 import time
 from datetime import datetime, timezone, timedelta
+import json
+
+print("[DEBUG FULL PAGE DUMP]")
+print(json.dumps(results[0], indent=2, ensure_ascii=False))
 
 # --- 環境変数 ---
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
