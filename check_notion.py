@@ -92,7 +92,7 @@ def send_discord_notification(title, update_info, update_data, url):
     )
     payload = {"content": content}
 
-    for _ in range(3):
+    for _ in range(20):
         try:
             response = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
             if response.status_code == 204:
