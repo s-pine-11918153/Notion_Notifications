@@ -58,7 +58,7 @@ def extract_title(page):
 
 # --- 更新情報を取得 ---
 def extract_update_information(page):
-    prop = page["properties"].get("Update_informations")
+    prop = page["properties"].get("Update_information")
     if prop and prop["type"] == "rich_text" and prop["rich_text"]:
         return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
     return "（Update_informations プロパティなし）"
