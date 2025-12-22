@@ -61,7 +61,7 @@ def extract_update_information(page):
     prop = page["properties"].get("Update_information")
     if prop and prop["type"] == "rich_text" and prop["rich_text"]:
         return "".join([rt.get("plain_text", "") for rt in prop["rich_text"]])
-    return "（Update_informations プロパティなし）"
+    return "（Update_information プロパティなし）"
 
 # --- 最終更新日時を取得（ページメタデータから） ---
 def extract_update_data(page):
